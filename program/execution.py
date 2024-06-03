@@ -1,14 +1,24 @@
+from multiprocessing import Pool
 import time
 
+from params.concurrency_params import ConcurrencyParams
 from params.program_params import ProgramParams
-from program.algorithm.algorithm import generate_routes, generate_vehicle_action_pairs, solve_optimization_problem
+from program.algorithm.algorithm import (
+    generate_routes,
+    generate_vehicle_action_pairs,
+    solve_optimization_problem,
+)
+from program.concurrency.helper_functions import dispatch_order
 from program.data_collector import DataCollector
 from program.grid.grid import Grid
 from program.interval.time import Time
 from program.interval.time_series import TimeSeries
 from program.logger import LOGGER
+from program.order.order import Order
 from program.order.orders import Orders
-from program.public_transport.fastest_station_connection_network import FastestStationConnectionNetwork
+from program.public_transport.fastest_station_connection_network import (
+    FastestStationConnectionNetwork,
+)
 from program.state.state import State
 from program.state.state_value_networks import StateValueNetworks
 from program.vehicle.vehicles import Vehicles
@@ -45,14 +55,8 @@ def execute_graph_reinforcement_learning():
         current_time = Time.of_total_minutes(current_total_minutes)
         LOGGER.info(f"Simulate time {current_time}")
 
-
-
-        LOGGER.debug(f"Dispatch orders")
-        orders = Orders.get_orders_by_time()[current_time]
-        for order in orders:
-            order.dispatch()
-        # Add orders to state
-        State.get_state().add_orders(orders)
+        # Dispatch Orders
+        dispatch_orders(Orders.get_orders_by_time()[current_time])
 
         # Update state
         State.get_state().update_state()
@@ -62,7 +66,9 @@ def execute_graph_reinforcement_learning():
 
         # Generate routes
         LOGGER.debug("Generate routes")
-        order_routes_dict = generate_routes(list(State.get_state().orders_dict.values()))
+        order_routes_dict = generate_routes(
+            list(State.get_state().orders_dict.values())
+        )
 
         # Generate Action-Driver pairs with all available routes and drivers
         LOGGER.debug("Generate vehicle-action-pairs")
@@ -77,13 +83,18 @@ def execute_graph_reinforcement_learning():
                 matched_order = match.action.route.order
                 destination_vehicle = match.action.route.vehicle_destination
                 destination_time = match.action.route.vehicle_time
-                DataCollector.append_orders_dataa(current_time,matched_order,destination_vehicle,destination_time)
+                DataCollector.append_orders_dataa(
+                    current_time, matched_order, destination_vehicle, destination_time
+                )
 
         # Apply state changes based on Action-Driver matches and existing driver jobs
         LOGGER.debug("Apply state-value changes")
         State.get_state().apply_state_change(matches)
 
-        if ProgramParams.FEATURE_RELOCATION_ENABLED and current_time.to_total_seconds() % ProgramParams.MAX_IDLING_TIME == 0:
+        if (
+            ProgramParams.FEATURE_RELOCATION_ENABLED
+            and current_time.to_total_seconds() % ProgramParams.MAX_IDLING_TIME == 0
+        ):
             LOGGER.debug("Relocate long time idle vehicles")
             State.get_state().relocate()
         if current_time.to_total_minutes() % 60 == 0:
@@ -97,7 +108,8 @@ def execute_graph_reinforcement_learning():
                     current_time, vehicle.id, status, vehicle.current_position
                 )
                 DataCollector.append_zone_id(
-                    current_time, Grid.get_instance().find_cell(vehicle.current_position).id
+                    current_time,
+                    Grid.get_instance().find_cell(vehicle.current_position).id,
                 )
 
         # Update the expiry durations of still open orders
@@ -117,3 +129,20 @@ def execute_graph_reinforcement_learning():
     LOGGER.info(f"Algorithm took {time.time() - start_time} seconds to run.")
 
     DataCollector.clear()
+
+
+def dispatch_orders(orders: list[Order]):
+    start = time.time()
+    LOGGER.debug(f"Dispatch orders")
+    if ConcurrencyParams.FEATURE_ORDER_DISPATCHING_CONCURRENT:
+        with Pool(
+            processes=ConcurrencyParams.AMOUNT_OF_PROCESSES
+        ) as pool:  # adjust the amount of processes to available cores
+            orders = pool.map(dispatch_order, orders)
+    else:
+        for order in orders:
+            order.dispatch()
+    # Add orders to state
+    State.get_state().add_orders(orders)
+    end = time.time()
+    LOGGER.debug(f"The order dispatching took {round((end - start)*1000,4)} ms.")

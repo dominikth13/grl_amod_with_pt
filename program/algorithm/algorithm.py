@@ -1,5 +1,9 @@
+from multiprocessing import Manager, Pool
+import time
+from params.concurrency_params import ConcurrencyParams
 from program.action.vehicle_action_pair import VehicleActionPair
 from program.algorithm.model_builder import or_tools_min_cost_flow
+from program.concurrency.helper_functions import generate_route_managed
 from program.data_collector import DataCollector
 from program.vehicle.vehicles import Vehicles
 from program.grid.grid import Grid
@@ -21,67 +25,82 @@ from program.state.state_value_networks import StateValueNetworks
 def generate_routes(orders: list[Order]) -> dict[Order, list[Route]]:
     routes_per_order = {order: [] for order in orders}
     fastest_connection_network = FastestStationConnectionNetwork.get_instance()
-    for order in orders:
-        default_route = Route.regular_route(order)
-        routes_per_order[order].append(default_route)
-        start = order.start
-        end = order.end
-
-        if order.direct_connection[1] > ProgramParams.L1:
-            # 1. Get the closest start and end station for each line
-            from program.public_transport.station import Station
-
-            origins: list[Station] = []
-            destinations: list[Station] = []
-            for line in fastest_connection_network.lines:
-                origins.append(line.get_closest_station(start))
-                destinations.append(line.get_closest_station(end))
-
-            # 2. Generate combination routes
-            for origin in origins:
-                for destination in destinations:
-                    if origin == destination:
-                        continue
-                    connection = fastest_connection_network.get_fastest_connection(
-                        origin, destination
-                    )
-
-                    # Distance (time in second)
-                    vehicle_time = (
-                        start.distance_to(origin.position) / ProgramParams.VEHICLE_SPEED
-                    )
-                    walking_time = (
-                        destination.position.distance_to(end)
-                        / ProgramParams.WALKING_SPEED
-                    )
-                    transit_time = connection[1]
-                    stations = connection[0]
-                    # include entry, exit and waiting time
-                    other_time = (
-                        2 * ProgramParams.PUBLIC_TRANSPORT_ENTRY_EXIT_TIME
-                        + ProgramParams.PUBLIC_TRANSPORT_WAITING_TIME(
-                            order.dispatch_time
-                        )
-                    )
-                    total_time = vehicle_time + walking_time + transit_time + other_time
-
-                    # Since we want people to use public transport, here we check against the direct_connection without any bus
-                    if total_time < order.direct_connection[1] + ProgramParams.L2:
-                        routes_per_order[order].append(
-                            Route(
-                                order,
-                                start,
-                                end,
-                                stations,
-                                vehicle_time,
-                                transit_time,
-                                walking_time,
-                                other_time,
-                                total_time,
-                            )
-                        )
+    start = time.time()
+    if ConcurrencyParams.FEATURE_ROUTE_CALCULATION_CONCURRENT:
+        with Pool(processes=ConcurrencyParams.AMOUNT_OF_PROCESSES) as pool:  # adjust the amount of processes to available cores
+            results = pool.map(generate_routes_for, orders)
+    else:
+        results = []
+        for order in orders:
+            results.append(generate_routes_for(order))
+    routes_per_order = {order: routes for order, routes in results}
+    end = time.time()
+    LOGGER.debug(
+        f"The route generation took {round((end - start)*1000,4)} ms.")
     return routes_per_order
 
+def generate_routes_for(order: Order) -> tuple[Order, list[Route]]:
+    routes = []
+    fastest_connection_network = FastestStationConnectionNetwork.get_instance()
+    default_route = Route.regular_route(order)
+    routes.append(default_route)
+    start = order.start
+    end = order.end
+
+    if order.direct_connection[1] > ProgramParams.L1:
+        # 1. Get the closest start and end station for each line
+        from program.public_transport.station import Station
+
+        origins: list[Station] = []
+        destinations: list[Station] = []
+        for line in fastest_connection_network.lines:
+            origins.append(line.get_closest_station(start))
+            destinations.append(line.get_closest_station(end))
+
+        # 2. Generate combination routes
+        for origin in origins:
+            for destination in destinations:
+                if origin == destination:
+                    continue
+                connection = fastest_connection_network.get_fastest_connection(
+                    origin, destination
+                )
+
+                # Distance (time in second)
+                vehicle_time = (
+                    start.distance_to(origin.position) / ProgramParams.VEHICLE_SPEED
+                )
+                walking_time = (
+                    destination.position.distance_to(end)
+                    / ProgramParams.WALKING_SPEED
+                )
+                transit_time = connection[1]
+                stations = connection[0]
+                # include entry, exit and waiting time
+                other_time = (
+                    2 * ProgramParams.PUBLIC_TRANSPORT_ENTRY_EXIT_TIME
+                    + ProgramParams.PUBLIC_TRANSPORT_WAITING_TIME(
+                        order.dispatch_time
+                    )
+                )
+                total_time = vehicle_time + walking_time + transit_time + other_time
+
+                # Since we want people to use public transport, here we check against the direct_connection without any bus
+                if total_time < order.direct_connection[1] + ProgramParams.L2:
+                    routes.append(
+                        Route(
+                            order,
+                            start,
+                            end,
+                            stations,
+                            vehicle_time,
+                            transit_time,
+                            walking_time,
+                            other_time,
+                            total_time,
+                        )
+                    )
+    return order, routes
 
 def generate_vehicle_action_pairs(
     order_routes_dict: dict[Order, list[Route]]

@@ -23,7 +23,7 @@ class Route:
         other_time: float,
         total_time: float,
     ) -> None:
-        self.id = ID_PROVIDER.get_id()
+        self.id = ID_PROVIDER.get_uuid()
         self.order = order
         self.origin = origin
         self.destination = destination

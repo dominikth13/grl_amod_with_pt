@@ -3,7 +3,6 @@ import time
 from params.concurrency_params import ConcurrencyParams
 from program.action.vehicle_action_pair import VehicleActionPair
 from program.algorithm.model_builder import or_tools_min_cost_flow
-from program.concurrency.helper_functions import generate_route_managed
 from program.data_collector import DataCollector
 from program.vehicle.vehicles import Vehicles
 from program.grid.grid import Grid
@@ -152,8 +151,8 @@ def generate_vehicle_action_pairs(
                 operated_orders.add(order)
                 vehicle_to_orders_dict[vehicle].append(order)
 
-    best_actions: dict[Order, tuple[Action, float]] = {}
-    # 4. Calculate the actions Q-value for each route that maybe operated and save the best action
+    # 3.5. Calculate the actions Q-value
+    action_to_q_value = {}
     for order in operated_orders:
         actions: list[tuple[Action, float]] = []
         # Calculate Q-values for all actions
@@ -174,26 +173,49 @@ def generate_vehicle_action_pairs(
             else:
                 # Baseline Performance
                 state_value = 0
+            action_to_q_value[action] = state_value
 
-            weight = (
-                action.route.time_reduction
-                + ProgramParams.DISCOUNT_FACTOR(
-                    State.get_state().current_time.distance_to(arrival_time)
+    start = time.time()
+    best_actions: dict[Order, tuple[Action, float]] = {}
+    if ConcurrencyParams.FEATURE_BEST_ACTION_CALCULATION_CONCURRENT:
+        order_by_id = {order.id: order for order in operated_orders}
+        action_by_id = {action.id: action for action in action_to_q_value}
+        with Pool(processes=ConcurrencyParams.AMOUNT_OF_PROCESSES) as pool:  # adjust the amount of processes to available cores
+            results = pool.starmap(generate_route_actions, [(order, [(action, action_to_q_value[action]) for action in order_to_actions_dict[order]]) for order in operated_orders])
+        best_actions = {order_by_id[result[0].id]: (action_by_id[result[1][0].id], result[1][1]) for result in results}
+    else :
+        # 4. Calculate the actions Q-value for each route that maybe operated and save the best action
+        for order in operated_orders:
+            actions: list[tuple[Action, float]] = []
+            # Calculate Q-values for all actions
+            for action in order_to_actions_dict[order]:
+                # For the Q-value calculation we expect the medium pickup distance threshold driving time
+                arrival_time = State.get_state().current_time.add_seconds(
+                    ProgramParams.PICK_UP_DISTANCE_THRESHOLD
+                    / ProgramParams.VEHICLE_SPEED
+                    / 2
+                ).add_seconds(action.route.vehicle_time)
+                weight = (
+                    action.route.time_reduction
+                    + ProgramParams.DISCOUNT_FACTOR(
+                        State.get_state().current_time.distance_to(arrival_time)
+                    )
+                    * action_to_q_value[action]
                 )
-                * state_value
-            )
-            if action.route.is_regular_route():
-                weight = weight * ProgramParams.DIRECT_TRIP_DISCOUNT_FACTOR
-            actions.append((action, weight))
+                if action.route.is_regular_route():
+                    weight = weight * ProgramParams.DIRECT_TRIP_DISCOUNT_FACTOR
+                actions.append((action, weight))
 
-        # Save best action
-        best_action = actions[0]
-        for tup in actions:
-            if best_action[1] < tup[1]:
-                best_action = tup
+            # Save best action
+            best_action = actions[0]
+            for tup in actions:
+                if best_action[1] < tup[1]:
+                    best_action = tup
 
-        best_actions[order] = best_action
-
+            best_actions[order] = best_action
+    end = time.time()
+    LOGGER.debug(
+        f"The action route generation took {round((end - start)*1000,4)} ms.")
     vehicle_action_pairs = []
     # 5. Create VehicleRoutePairs and put them together with idling in return list
     for vehicle in vehicle_to_orders_dict:
@@ -208,6 +230,34 @@ def generate_vehicle_action_pairs(
 
     return vehicle_action_pairs
 
+def generate_route_actions(order: Order, action_and_value: list[tuple[Action, float]]) -> tuple[Order, tuple[Action, float]]:
+    action_and_weight = []
+    # Calculate Q-values for all actions
+    for action, state_value in action_and_value:
+        # For the Q-value calculation we expect the medium pickup distance threshold driving time
+        arrival_time = State.get_state().current_time.add_seconds(
+            ProgramParams.PICK_UP_DISTANCE_THRESHOLD
+            / ProgramParams.VEHICLE_SPEED
+            / 2
+        ).add_seconds(action.route.vehicle_time)
+        weight = (
+            action.route.time_reduction
+            + ProgramParams.DISCOUNT_FACTOR(
+                State.get_state().current_time.distance_to(arrival_time)
+            )
+            * state_value
+        )
+        if action.route.is_regular_route():
+            weight = weight * ProgramParams.DIRECT_TRIP_DISCOUNT_FACTOR
+        action_and_weight.append((action, weight))
+
+    # Save best action
+    best_action = action_and_weight[0]
+    for tup in action_and_weight:
+        if best_action[1] < tup[1]:
+            best_action = tup
+
+    return order, best_action
 
 def solve_optimization_problem(
     vehicle_action_pairs: list[VehicleActionPair],

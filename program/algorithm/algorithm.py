@@ -163,7 +163,7 @@ def generate_vehicle_action_pairs(
                 ProgramParams.PICK_UP_DISTANCE_THRESHOLD
                 / ProgramParams.VEHICLE_SPEED
                 / 2
-            )
+            ).add_seconds(action.route.vehicle_time)
             # weight = time reduction for passenger + state value after this option
             if ProgramParams.EXECUTION_MODE == Mode.GRAPH_REINFORCEMENT_LEARNING:
                 state_value = StateValueNetworks.get_instance().get_target_state_value(

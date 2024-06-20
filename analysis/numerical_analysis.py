@@ -8,7 +8,7 @@ import shutil
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import jensenshannon
 
-from analysis.configuration import get_multi_comparison_values, set_params, get_comparison_values
+from analysis.configuration import get_all_multi_comparision_values, get_multi_comparison_values, set_params, get_comparison_values
 from params.program_params import Mode, ProgramParams
 from program.grid.grid import Grid
 from program.location.location import Location
@@ -182,7 +182,7 @@ def numerical_comparison():
         for row in output_data:
             writer.writerow([row] + output_data[row])
 
-def numerical_multi_comparison():
+def numerical_selected_multi_comparison():
     set_params()
     values = get_multi_comparison_values()
     output_data = {
@@ -219,6 +219,46 @@ def numerical_multi_comparison():
     with open(f"{figure_path}/{file_name}.csv", mode="w") as file:
         writer = csv.writer(file)
         writer.writerow(["Criteria"] + [paramsettings_to_string(value) for value in values])
+        for row in output_data:
+            writer.writerow([row] + output_data[row])
+
+def numerical_multi_comparison():
+    values = get_all_multi_comparision_values()
+    output_data = {
+        "Average time reduction per vehicle per hour in minutes": [],
+        "Amount of served orders per day": [],
+        "Combi route quota": [],
+        "Average vehicle route length in meters": [],
+        "Vehicle workload": [],
+        "Relocation workload": [],
+        "Idling quota": [],
+        "Average time reduction per order in minutes": [],
+        "Percentage of accepted orders": [],
+        "Average distance of relocation in meters": [],
+        "Jensen-Shannon-Divergence": []
+    }
+
+    for value in values:
+        set_params()
+        for key in value:
+            ProgramParams.set_member(key, value[key])
+
+        data = analyse()
+        for key in data:
+            output_data[key].append(data[key])
+
+    figure_path = f"store/multi_comparisons"
+    aov = values[0]["AMOUNT_OF_VEHICLES"]
+    file_name = f"comparison_{aov}_vehicles"
+
+    if not os.path.exists(figure_path):
+        os.makedirs(figure_path)
+    with open(f"{figure_path}/{file_name}.csv", mode="w") as file:
+        writer = csv.writer(file)
+        writer.writerow(["Param Settings"])
+        for row in ["AMOUNT_OF_VEHICLES","MAX_IDLING_TIME","DISCOUNT_RATE","LS","LEARNING_RATE","IDLING_COST","RELOCATION_RADIUS","DIRECT_TRIP_DISCOUNT_FACTOR","MAIN_AND_TARGET_NET_SYNC_ITERATIONS"]:
+            writer.writerow([row] + ["" if value.get(row) == None else value[row] for value in values])
+        writer.writerow(["Criteria"])
         for row in output_data:
             writer.writerow([row] + output_data[row])
 

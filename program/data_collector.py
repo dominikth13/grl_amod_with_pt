@@ -174,5 +174,4 @@ class DataCollector:
         DataCollector.workload.clear()
         DataCollector.trip_data.clear()
         DataCollector.time_reduction_quota.clear()
-        DataCollector.orders_dataa.clear()
         DataCollector.zone_id_list.clear()

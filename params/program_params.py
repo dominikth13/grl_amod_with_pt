@@ -12,6 +12,15 @@ class DataSet(Enum):
     YELLOW_CAB = "yellow_cab"
     FOR_HIRE = "for_hire"
 
+class ProgramStage(Enum):
+    ORDER_DISPATCHING = 1
+    ROUTE_GENERATION = 2
+    VEHICLE_ACTION_PAIRING = 3
+    VOM = 4
+    RE = 5
+    SIM_UPDATE = 6
+    VALUE_FUNC_UPDATE = 7
+
 class ProgramParams:
 
     ######################################################################################################

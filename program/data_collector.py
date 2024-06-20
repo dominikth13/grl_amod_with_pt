@@ -20,7 +20,6 @@ class DataCollector:
 
     # [(total_seconds, quota_of_unserved_orders, num_of_served_orders)]
     orders_data = []
-    orders_dataa = []
 
     # [(total_seconds, quota_of_saved_time_for_all_served_orders)]
     time_reduction_quota = []
@@ -62,25 +61,6 @@ class DataCollector:
                 current_time.to_total_seconds(),
                 quota_of_unserved_orders,
                 num_of_served_orders,
-            )
-        )
-
-    def append_orders_dataa(
-        current_time: Time,
-        order: Order,
-        destination_vehicle: Location,
-        destination_time: float,
-    ):
-        DataCollector.orders_dataa.append(
-            (
-                current_time.to_total_seconds(),
-                order.start.lat,
-                order.start.lon,
-                order.end.lat,
-                order.end.lon,
-                destination_vehicle.lat,
-                destination_vehicle.lon,
-                destination_time,
             )
         )
 
@@ -151,24 +131,6 @@ class DataCollector:
             )
             for w in DataCollector.orders_data:
                 writer.writerow([w[0], w[1], w[2]])
-
-        csv_file_path = f"{DataCollector.output_path()}/orders_dataa.csv"
-        with open(csv_file_path, mode="w") as file:
-            writer = csv.writer(file)
-            writer.writerow(
-                [
-                    "total_seconds",
-                    "start_lat",
-                    "start_lon",
-                    "end_lat",
-                    "end_lon",
-                    "veh_des_lat",
-                    "veh_des_lon",
-                    "veh_time",
-                ]
-            )
-            for w in DataCollector.orders_dataa:
-                writer.writerow([w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]])
 
         csv_file_path = f"{DataCollector.output_path()}/average_time_reduction{ProgramParams.SIMULATION_DATE.strftime('%Y-%m-%d')}.csv"
         with open(csv_file_path, mode="w") as file:

@@ -103,10 +103,6 @@ class State:
                 # Remove order from open orders set
                 del self.orders_dict[route.order.id]
 
-        self.update_average_time_reductions()
-        self.apply_state_changes_to_value_function()
-        self.action_reward_tuples = []
-
         amount_of_unserved_orders = len(self.orders_dict)
         DataCollector.append_orders_data(
             self.current_time,
@@ -130,6 +126,11 @@ class State:
         # Compute job state changes for all vehicles
         for vehicle in Vehicles.get_vehicles():
             vehicle.update_job_status(ProgramParams.SIMULATION_UPDATE_RATE)
+    
+    def update_state_value_function(self) -> None:
+        self.update_average_time_reductions()
+        self.apply_state_changes_to_value_function()
+        self.action_reward_tuples = []
 
     def update_average_time_reductions(self) -> None:
         for tup in self.action_reward_tuples:

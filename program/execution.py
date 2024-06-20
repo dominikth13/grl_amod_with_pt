@@ -2,7 +2,8 @@ from multiprocessing import Pool
 import time
 
 from params.concurrency_params import ConcurrencyParams
-from params.program_params import ProgramParams
+from params.program_params import ProgramParams, ProgramStage
+from params.program_stats import ProgramStats
 from program.algorithm.algorithm import (
     generate_routes,
     generate_vehicle_action_pairs,
@@ -56,7 +57,13 @@ def execute_graph_reinforcement_learning():
         LOGGER.info(f"Simulate time {current_time}")
 
         # Dispatch Orders
+        before_timestamp = time.time()
         dispatch_orders(Orders.get_orders_by_time()[current_time])
+
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.ORDER_DISPATCHING] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
 
         # Update state
         State.get_state().update_state()
@@ -64,35 +71,60 @@ def execute_graph_reinforcement_learning():
         # Initialize state value networks
         StateValueNetworks.get_instance().initialize_iteration()
 
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.VALUE_FUNC_UPDATE] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
+
         # Generate routes
         LOGGER.debug("Generate routes")
         order_routes_dict = generate_routes(
             list(State.get_state().orders_dict.values())
         )
 
-        # Generate Action-Driver pairs with all available routes and drivers
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.ROUTE_GENERATION] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
+
+        # Generate Vehicle-Action pairs with all available routes and vehicles
         LOGGER.debug("Generate vehicle-action-pairs")
         vehicle_action_pairs = generate_vehicle_action_pairs(order_routes_dict)
+
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.VEHICLE_ACTION_PAIRING] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
 
         # Find vehicle-action matches based on a min-cost-flow problem
         LOGGER.debug("Generate vehicle-action matches")
         matches = solve_optimization_problem(vehicle_action_pairs)
 
-        for match in matches:
-            if match.action.is_route():
-                matched_order = match.action.route.order
-                destination_vehicle = match.action.route.vehicle_destination
-                destination_time = match.action.route.vehicle_time
-                DataCollector.append_orders_dataa(
-                    current_time, matched_order, destination_vehicle, destination_time
-                )
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.VOM] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
 
         # Apply state changes based on Action-Driver matches and existing driver jobs
-        LOGGER.debug("Apply state-value changes")
+        LOGGER.debug("Apply simulation changes")
         State.get_state().apply_state_change(matches)
 
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.SIM_UPDATE] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
+
+        # Apply state value changes
+        LOGGER.debug("Apply state-value function changes")
+        State.get_state().update_state_value_function()
+
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.VALUE_FUNC_UPDATE] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
+
         if (
-            ProgramParams.FEATURE_RELOCATION_ENABLED
+            ProgramParams.FEATURE_RELOCATION_ENABLED()
             and current_time.to_total_seconds() % ProgramParams.MAX_IDLING_TIME == 0
         ):
             LOGGER.debug("Relocate long time idle vehicles")
@@ -111,12 +143,22 @@ def execute_graph_reinforcement_learning():
                     current_time,
                     Grid.get_instance().find_cell(vehicle.current_position).id,
                 )
+        
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.RE] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
 
         # Update the expiry durations of still open orders
         State.get_state().update_order_expiry_duration()
 
         # Increment to next interval
         State.get_state().increment_time_interval(current_time)
+
+        # Save runtime
+        after_timestamp = time.time()
+        ProgramStats.RUNTIME[ProgramStage.SIM_UPDATE] += (after_timestamp - before_timestamp)
+        before_timestamp = after_timestamp
 
     LOGGER.info("Exporting final vehicle positions")
     Vehicles.export_vehicles()
@@ -126,6 +168,8 @@ def execute_graph_reinforcement_learning():
     DataCollector.export_all_data()
     LOGGER.info("Exporting training results")
     StateValueNetworks.get_instance().export_weights()
+    LOGGER.info("Exporting runtime values")
+    ProgramStats.export_to_csv()
     LOGGER.info(f"Algorithm took {time.time() - start_time} seconds to run.")
 
     DataCollector.clear()

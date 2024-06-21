@@ -4,7 +4,7 @@ from params.program_params import Mode, ProgramParams
 # Run this to set the parameters for analysis
 def set_params():
     # Set program params
-    ProgramParams.EXECUTION_MODE = Mode.GRAPH_REINFORCEMENT_LEARNING
+    ProgramParams.EXECUTION_MODE = Mode.Q_LEARNING
     ProgramParams.MAX_IDLING_TIME = 300
     ProgramParams.DISCOUNT_RATE = 0.95
     ProgramParams.LS = 60

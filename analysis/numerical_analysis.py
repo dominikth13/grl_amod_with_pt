@@ -12,6 +12,7 @@ from analysis.configuration import get_all_multi_comparision_values, get_multi_c
 from params.program_params import Mode, ProgramParams
 from program.grid.grid import Grid
 from program.location.location import Location
+from program.logger import LOGGER
 
 
 def load_and_merge_data(base_path, filename, dates):
@@ -66,6 +67,12 @@ def analyse():
         ),
         2,
     )
+    median = data["time_reduction"].median()/60
+    upper_qantile = data["time_reduction"].quantile(0.75)/60
+    lower_quantile = data["time_reduction"].quantile(0.25)/60
+    LOGGER.info(f"Median: {median}")
+    LOGGER.info(f"Upper quantile: {upper_qantile}")
+    LOGGER.info(f"Lower quantile: {lower_quantile}")
     output_data["Amount of served orders per day"] = int(len(data) / len(dates))
     output_data["Combi route quota"] = (
         f"{round(100*sum(data['combi_route']/len(data)), 2)}%"
@@ -99,7 +106,7 @@ def analyse():
     output_data["Average distance of relocation in meters"] = round(
         sum(datarl["distance"] / len(datarl)), 2
     )
-    output_data["Jensen-Shannon-Divergence"] = round(calculate_vehicle_distribution(datadriver), 4)
+    output_data["Jensen-Shannon-Divergence"] = 0#round(calculate_vehicle_distribution(datadriver), 4)
 
     return output_data
 

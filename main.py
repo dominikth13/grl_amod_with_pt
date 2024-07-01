@@ -3,6 +3,7 @@ from datetime import timedelta
 import os
 from analysis.numerical_analysis import numerical_analysis, numerical_comparison, numerical_multi_comparison, numerical_selected_multi_comparison
 from analysis.plots_comparison import plot_comparison
+from params.concurrency_params import ConcurrencyParams
 from params.program_params import Mode, ProgramParams
 from params.program_stats import ProgramStats
 from program.execution import execute_graph_reinforcement_learning
@@ -33,6 +34,8 @@ def raze_data():
         os.remove("input_data/average_time_reduction_wd.csv")
     if os.path.exists("input_data/vehicles.csv"):
         os.remove("input_data/vehicles.csv")
+    if os.path.exists("data/runtime.csv"):
+        os.remove("data/runtime.csv")
 
 
 def grl_train_and_test():
@@ -63,6 +66,12 @@ if os.path.isfile("execution/program_params.csv"):
         reader = csv.DictReader(file)
         for row in reader:
             ProgramParams.set_member(row["parameter"], row["value"])
+# Read concurrency params
+if os.path.isfile("execution/concurrency_params.csv"):
+    with open("execution/concurrency_params.csv", mode="r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            ConcurrencyParams.set_member(row["parameter"], row["value"])
 # Read execution file
 if os.path.isfile("execution/run.csv"):
     with open("execution/run.csv", mode="r") as file:

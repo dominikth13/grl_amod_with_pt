@@ -133,58 +133,54 @@ def generate_vehicle_action_pairs(
                 operated_orders.add(order)
                 vehicle_to_orders_dict[vehicle].append(order)
 
-    best_actions: dict[Order, tuple[Action, float]] = {}
-    # 4. Calculate the actions Q-value for each route that maybe operated and save the best action
-    for order in operated_orders:
-        actions: list[tuple[Action, float]] = []
-        # Calculate Q-values for all actions
-        for action in order_to_actions_dict[order]:
-            # For the Q-value calculation we expect the medium pickup distance threshold driving time
-            arrival_time = State.get_state().current_time.add_seconds(
-                ProgramParams.PICK_UP_DISTANCE_THRESHOLD
-                / ProgramParams.VEHICLE_SPEED
-                / 2
-            ).add_seconds(action.route.vehicle_time)
-            # weight = time reduction for passenger + state value after this option
-            if ProgramParams.EXECUTION_MODE == Mode.GRAPH_REINFORCEMENT_LEARNING:
-                state_value = StateValueNetworks.get_instance().get_target_state_value(
-                    action,
-                    action.route.vehicle_destination_cell.zone,
-                    arrival_time,
-                )
-            else:
-                # Baseline Performance
-                state_value = 0
-
-            weight = (
-                action.route.time_reduction
-                + ProgramParams.DISCOUNT_FACTOR(
-                    State.get_state().current_time.distance_to(arrival_time)
-                )
-                * state_value
-            )
-            if action.route.is_regular_route():
-                weight = weight * ProgramParams.DIRECT_TRIP_DISCOUNT_FACTOR
-            actions.append((action, weight))
-
-        # Save best action
-        best_action = actions[0]
-        for tup in actions:
-            if best_action[1] < tup[1]:
-                best_action = tup
-
-        best_actions[order] = best_action
-
     vehicle_action_pairs = []
-    # 5. Create VehicleRoutePairs and put them together with idling in return list
+    # 4. Calculate the actions Q-value for each route-vehicle pair
     for vehicle in vehicle_to_orders_dict:
-        vehicle_action_pairs.append(vehicle_to_idling_dict[vehicle])
-
         for order in vehicle_to_orders_dict[vehicle]:
-            vehicle_action_pairs.append(
-                VehicleActionPair(
-                    vehicle, best_actions[order][0], best_actions[order][1]
+            actions: list[tuple[Action, float]] = []
+            # Calculate Q-values for all actions
+            for action in order_to_actions_dict[order]:
+                # For the Q-value calculation we expect the medium pickup distance threshold driving time
+                arrival_time = (
+                    State.get_state()
+                    .current_time.add_seconds(
+                        vehicle.current_position.distance_to(order.start)
+                        / ProgramParams.VEHICLE_SPEED
+                    )
+                    .add_seconds(action.route.vehicle_time)
                 )
+                # weight = time reduction for passenger + state value after this option
+                if ProgramParams.EXECUTION_MODE == Mode.GRAPH_REINFORCEMENT_LEARNING:
+                    state_value = (
+                        StateValueNetworks.get_instance().get_target_state_value(
+                            action,
+                            action.route.vehicle_destination_cell.zone,
+                            arrival_time,
+                        )
+                    )
+                else:
+                    # Baseline Performance
+                    state_value = 0
+
+                weight = (
+                    action.route.time_reduction
+                    + ProgramParams.DISCOUNT_FACTOR(
+                        State.get_state().current_time.distance_to(arrival_time)
+                    )
+                    * state_value
+                )
+                if action.route.is_regular_route():
+                    weight = weight * ProgramParams.DIRECT_TRIP_DISCOUNT_FACTOR
+                actions.append((action, weight))
+
+            # Save best action
+            best_action = actions[0]
+            for tup in actions:
+                if best_action[1] < tup[1]:
+                    best_action = tup
+
+            vehicle_action_pairs.append(
+                VehicleActionPair(vehicle, best_action[0], best_action[1])
             )
 
     return vehicle_action_pairs

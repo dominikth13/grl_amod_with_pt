@@ -105,7 +105,7 @@ def execute_graph_reinforcement_learning():
         ProgramStats.RUNTIME[ProgramStage.VOM] += (after_timestamp - before_timestamp)
         before_timestamp = after_timestamp
 
-        # Apply state changes based on Action-Driver matches and existing driver jobs
+        # Apply state changes based on Action-Vehicle matches and existing vehicle jobs
         LOGGER.debug("Apply simulation changes")
         State.get_state().apply_state_change(matches)
 

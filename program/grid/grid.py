@@ -102,7 +102,7 @@ class Grid:
                     high = mid - 1
 
         if len(first_selection) == 0:
-            raise Exception(f"Latitute {location.lat} not in range")
+            raise Exception(f"Latitude {location.lat} not in range")
 
         low = 0
         high = len(first_selection) - 1

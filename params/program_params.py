@@ -36,6 +36,8 @@ class ProgramParams:
     ######################################################################################################
     ############### Hyperparameters ###############
     DISCOUNT_RATE = 0.95
+
+    # Discount weight
     LS = 60
     def DISCOUNT_FACTOR(duration_in_seconds: int) -> float:
 
@@ -78,13 +80,14 @@ class ProgramParams:
     # Maximum difference between route without vehicles time and route with vehicles time in seconds
     L2 = 1800
     
+    # State interval
     GRID_INTERVAL_UPDATE_RATE = 1800
     
 
     ##########################################################################################################
     ############### Inilization of the public transport network ###############
-    STATION_DURATION = 80  # Fahrzeit für eine Station
-    TRANSFER_SAME_STATION = 300  # Setzen Sie hier den Wert für Umsteige_selbe_Station
+    STATION_DURATION = 80  # driving time between stations in seconds
+    TRANSFER_SAME_STATION = 300  # transfer time at the same station in seconds
     MAX_WALKING_DURATION = 600
 
 

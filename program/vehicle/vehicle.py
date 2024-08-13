@@ -11,7 +11,7 @@ class Vehicle:
         self.id = id if id != None else ID_PROVIDER.get_id()
         self.current_position = start_position
         self.job: VehicleJob = None
-        # Time that passed since drivers last job
+        # Time that passed since vehicles last job
         self.idle_time = 0
 
     def is_occupied(self) -> bool:

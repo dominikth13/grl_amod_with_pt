@@ -6,3 +6,8 @@ To start the app, run the `main.py` file in the root directory. Based on your lo
 
 ## Configure the application
 Configuration can be done in the `params/program_params.py`. All parameters used in the masters thesis can be configured here. Initially shown is the standard parameter set.
+
+## Parallelization
+To activate parallelization capabilities you can configure the parameters in the `params/concurrency_params.py`. The amount of worker processes can be configured with the `AMOUNT_OF_PROCESSES` parameter and the parallelization of the three stages can be activated with the corresponding flags. 
+
+**Important**: The parallelization is only tested in an Ubuntu 22.04.2 LTS environment. It is known to fail in an Windows 11 environment. For safe execution outside of an linux environment, consider using Docker.

@@ -66,6 +66,7 @@ def analyse():
         ),
         2,
     )
+
     output_data["Amount of served orders per day"] = int(len(data) / len(dates))
     output_data["Combi route quota"] = (
         f"{round(100*sum(data['combi_route']/len(data)), 2)}%"
@@ -93,6 +94,14 @@ def analyse():
     output_data["Average time reduction per order in minutes"] = round(
         total_time_reduction / len(data), 2
     )
+
+    median = data["time_reduction"].median()/60
+    upper_qantile = data["time_reduction"].quantile(0.75)/60
+    lower_quantile = data["time_reduction"].quantile(0.25)/60
+    output_data["Median time reduction per order in minutes"] = round(median, 2)
+    output_data["Upper quantile time reduction per order in minutes"] = round(upper_qantile, 2)
+    output_data["Lower quantile time reduction per order in minutes"] = round(lower_quantile, 2)
+
     output_data["Percentage of accepted orders"] = round(
         100 * len(data) / len(dataorders), 2
     )

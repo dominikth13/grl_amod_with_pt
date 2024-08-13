@@ -105,3 +105,60 @@ def find_relevant_multi_paths(amount_of_vehicles: int):
                     relevant_combinations.append(changes_dict)               
     
     return relevant_combinations
+
+def get_vehicle_comparison_values() -> tuple[list[int], dict[int, dict]]:
+    vehicle_amounts = [2000, 4000, 5000, 6000]
+    vehicle_params = {
+        2000: {
+            "RELOCATION_RADIUS": 7500,
+            "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45
+        },
+        4000: {
+            "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45,
+            "AMOUNT_OF_VEHICLES": 4000
+        },
+        5000: {
+            "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45,
+            "AMOUNT_OF_VEHICLES": 5000
+        },
+        6000: {
+            "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45,
+            "AMOUNT_OF_VEHICLES": 6000
+        }
+    }
+
+    return vehicle_amounts, vehicle_params
+
+def get_procedure_comparison_values() -> tuple[list[int], dict[int, dict]]:
+    procedures = ["grl", "rl"]
+    vehicle_params = {
+        "grl": {
+            2000: {
+                "RELOCATION_RADIUS": 7500,
+                "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45
+            },
+            4000: {
+                "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45,
+                "AMOUNT_OF_VEHICLES": 4000
+            },
+            5000: {
+                "DIRECT_TRIP_DISCOUNT_FACTOR": 0.45,
+                "AMOUNT_OF_VEHICLES": 5000
+            }
+        },
+        "rl": {
+            2000: {
+                "EXECUTION_MODE": "rl",
+            },
+            4000: {
+                "EXECUTION_MODE": "rl",
+                "AMOUNT_OF_VEHICLES": 4000
+            },
+            5000: {
+                "EXECUTION_MODE": "rl",
+                "AMOUNT_OF_VEHICLES": 5000
+            }
+        }
+    }
+
+    return procedures, vehicle_params

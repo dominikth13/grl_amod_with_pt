@@ -536,18 +536,20 @@ def visualize_combi_route_ratio():
             combi_routes_per_day.append(float("nan"))
     
     fig, ax5 = plt.subplots(1, 1, figsize=(15, 12))
+    
+    # Direktrouten Balken
     ax5.bar(
         dates,
         direct_routes_per_day,
         color="#90EE90",
-        label="Direct routes",
+        label="Direktrouten",
     )
 
+    # Gleitender Durchschnitt - Direktrouten
     moving_average_direct = calculate_moving_average(
         direct_routes_per_day, window_size=5
     )
 
-    # Adjust 'dates' to ignore the first value
     ax5.plot(
         dates,
         moving_average_direct,
@@ -555,29 +557,67 @@ def visualize_combi_route_ratio():
         marker=".",
         linestyle="-",
         linewidth=2,
-        label="Moving average",
+        label="Gleitender Durchschnitt - Direktrouten",
     )
 
+    # Kombirouten Balken
     ax5.bar(
         dates,
         combi_routes_per_day,
         color="green",
         alpha=0.6,
-        label="Combi routes",
+        label="Kombirouten",
         bottom=direct_routes_per_day,
     )
 
-    ax5.set_xlabel("Date")
-    ax5.set_ylabel("Amount of accepted orders")
-    ax5.set_title("Ratio between direct and combi routes")
+    # Gleitender Durchschnitt - Bediente Orders
+    total_routes_per_day = [a + b for a, b in zip(direct_routes_per_day, combi_routes_per_day)]
+    moving_average_total = calculate_moving_average(
+        total_routes_per_day, window_size=5
+    )
+
+    ax5.plot(
+        dates,
+        moving_average_total,
+        color="blue",
+        marker=".",
+        linestyle="-",
+        linewidth=2,
+        label="Gleitender Durchschnitt - Bediente Orders",
+    )
+
+    # Trennlinie zwischen Trainings- und Testzeitraum
+    # Den numerischen Index für die x-Position der Trennlinie verwenden
+    split_date_index = dates.index('2023-07-23')
+    # Positioniere die Linie zwischen den Indizes 23. und 24. Juli
+    line_position = split_date_index + 0.5
+
+    ax2 = ax5.twinx()  # zweite Achse auf der gleichen Figur
+    ax2.axvline(x=line_position, color='black', linestyle='--', linewidth=2, zorder=10)
+    ax2.set_yticks([])  # Verstecke die Y-Achse der zweiten Achse, da sie nicht benötigt wird
+
+    # Training und Test-Beschriftung
+    ax5.text(line_position - 3, max(total_routes_per_day) * 1.02, "Trainingsphase", horizontalalignment='center', color='black', fontsize=14, weight='bold')
+    ax5.text(line_position + 2, max(total_routes_per_day) * 1.02, "Testphase", horizontalalignment='center', color='black', fontsize=14, weight='bold')
+
+
+
+    # Achsenbeschriftungen und Titel mit größerer Schriftgröße
+    ax5.set_xlabel("Datum", fontsize=14)
+    ax5.set_ylabel("Anzahl bedienter Orders", fontsize=14)
+    ax5.set_title("Verhältnis zwischen Direkt- und Kombirouten pro Tag bei 4000 Fahrzeugen", fontsize=18)
     ax5.set_xticklabels(dates, rotation=45)
 
-    plt.legend()
+    # Legende
+    ax5.legend(fontsize=12)
 
+    # Speichern der Figur
     figure_path = f"store/{ProgramParams.DATA_OUTPUT_FILE_PATH()}/figures"
     if not os.path.exists(figure_path):
         os.makedirs(figure_path)
     plt.savefig(f"{figure_path}/combi_route_ratio.png")
+
+
 
 def visualize_vehicles():
     set_params()

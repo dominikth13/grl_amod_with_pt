@@ -7,6 +7,7 @@ class Mode(Enum):
     # Just solve the optimization problem without knowing state values
     BASELINE_PERFORMANCE = "bl"
     Q_LEARNING = "rl"
+    DEEP_Q_LEARNING = "drl"
 
 class DataSet(Enum):
     YELLOW_CAB = "yellow_cab"
@@ -150,7 +151,9 @@ class ProgramParams:
         return f"{mode}/{mit}/{dr}/{ls}/{lr}/{idling_cost}/{aov}/{re_radius}/{direct_discount}/{main_target_sync}"
 
     def set_member(member: str, value):
-        if member == "MAX_IDLING_TIME":
+        if member == "EXECUTION_MODE":
+            ProgramParams.EXECUTION_MODE = Mode(value)
+        elif member == "MAX_IDLING_TIME":
             ProgramParams.MAX_IDLING_TIME = int(value)
         elif member == "DISCOUNT_RATE":
             ProgramParams.DISCOUNT_RATE = float(value)

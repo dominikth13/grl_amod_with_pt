@@ -1,17 +1,8 @@
 # grl_amod_with_pt
 This repository contains the codebase of my master's thesis. It is about the use of graph-based reinforcement learning for integrating autonomous on-demand services with regular public transportation.
 
-## Technology Choices
+## Run the application
+To start the app, run the `main.py` file in the root directory. Based on your local device, this can be achieved via `py main.py` or `python3 main.py`. After startup, install all required packages to your local python installation with pip. After the application started, a menu will be displayed into your console. The first option will start the graph reinforcement learning algorithm either for the whole 21 day simulation period or a single day. The other three options are only important, when you want to  recreate some static data or for analysis purposes.
 
-It was decided to develop the framework in Python. The Graph Convolutional Networks are developed using PyTorch in combination with PyTorch Geometric. Possible multithreading can be implemented with the `multiprocessing` package, taking care to ensure that only inputs and outputs (e.g., `Queue`) are visible in the main process. Overall, the framework is designed in an object-oriented manner, where type annotations must be attached, and type safety is ensured by `mypy`.
-
-### Important Documentation Links
-
-- **PyTorch Geometric (PyG)**: An extension library for PyTorch, specially designed for deep learning on graphs and other irregular structures.
-  - [PyTorch Geometric Documentation](https://pytorch-geometric.readthedocs.io/en/latest/)
-
-- **`multiprocessing`**: A package for concurrent execution using processes, providing an easy way to parallelize Python code.
-  - [Multiprocessing Documentation](https://docs.python.org/3/library/multiprocessing.html)
-
-- **`mypy`**: A static type checker for Python, ensuring that type annotations are correct and consistent throughout the codebase.
-  - [Mypy Documentation](http://mypy-lang.org/)
+## Configure the application
+Configuration can be done in the `params/program_params.py`. All parameters used in the masters thesis can be configured here. Initially shown is the standard parameter set.

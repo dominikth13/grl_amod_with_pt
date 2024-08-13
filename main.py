@@ -3,6 +3,8 @@ from datetime import timedelta
 import os
 from analysis.numerical_analysis import numerical_analysis, numerical_comparison, numerical_multi_comparison, numerical_selected_multi_comparison
 from analysis.plots_comparison import plot_comparison
+from analysis.plots_procedure_comparison import vehicle_postions_procedures, usage_and_rejection_procedures
+from analysis.plots_vehicle_comparison import combi_route_quota_vehicles, served_orders_vehicles, time_reduction_per_order_vehicles, vehicle_distribution_vehicles, vehicle_postions_vehicles, workload_vehicles
 from params.concurrency_params import ConcurrencyParams
 from params.program_params import Mode, ProgramParams
 from params.program_stats import ProgramStats
@@ -167,7 +169,7 @@ if __name__ == '__main__':
                 elif user_input == "2":
                     while True:
                         user_input = input(
-                            "Which script do you want to start? (Data analysis -> 1, Data comparison -> 2) "
+                            "Which script do you want to start? (Data analysis -> 1, Data comparison -> 2, Vehicle comparison -> 3, Procedure comparison -> 4) "
                         )
                         if user_input == "1":
                             while True:
@@ -198,12 +200,52 @@ if __name__ == '__main__':
                         elif user_input == "2":
                             plot_comparison()
                             break
+                        elif user_input == "3":
+                            while True:
+                                user_input = input(
+                                    "Which script do you want to start? (Time reduction -> 1, Served orders -> 2, Workload -> 3, Combi routes -> 4, 5 -> Vehicle distribution, 6 -> Vehicle locations) "
+                                )
+                                if user_input == "1":
+                                    time_reduction_per_order_vehicles()
+                                    break
+                                elif user_input == "2":
+                                    served_orders_vehicles()
+                                    break
+                                elif user_input == "3":
+                                    workload_vehicles()
+                                    break
+                                elif user_input == "4":
+                                    combi_route_quota_vehicles()
+                                    break
+                                elif user_input == "5":
+                                    vehicle_distribution_vehicles()
+                                    break
+                                elif user_input == "6":
+                                    vehicle_postions_vehicles()
+                                    break
+                                else:
+                                    print("This option is not allowed. Please try again.")
+                            break
+                        elif user_input == "4":
+                            while True:
+                                user_input = input(
+                                    "Which script do you want to start? (Vehicle positions -> 1, Usage and rejections -> 2) "
+                                )
+                                if user_input == "1":
+                                    vehicle_postions_procedures()
+                                    break
+                                elif user_input == "2":
+                                    usage_and_rejection_procedures()
+                                    break
+                                else:
+                                    print("This option is not allowed. Please try again.")
+                            break
                         else:
                             print("This option is not allowed. Please try again.")
                     break
-                    
-        
-            break
-
+                else:
+                    print("This option is not allowed. Please try again.")
+                break
         else:
             print("This option is not allowed. Please try again.")
+        break
